@@ -1,9 +1,9 @@
-from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from google import genai
-from google.genai import types
+from fastapi.responses import Response
 from dotenv import load_dotenv
+from validator import validate_youtube_url, ValidationError
+from agent import run_agent
 
 load_dotenv()
 
@@ -17,58 +17,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = genai.Client()
-
-SYSTEM_PROMPT = """
-You are an AI agent that converts educational YouTube videos into structured LaTeX books.
-
-Your task:
-- Analyze the video transcript or summary.
-- Convert it into structured LaTeX sections.
-- Produce clean LaTeX suitable for PDF compilation.
-
-Output ONLY LaTeX content.
-"""
-
-
-def stream_response(url: str):
-
-    try:
-        prompt = f"""
-Convert the following YouTube video into a structured LaTeX document.
-
-Video URL:
-{url}
-
-Assume the video contains an educational lecture.
-Generate a structured LaTeX document summarizing the content.
-"""
-
-        stream = client.models.generate_content_stream(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT
-            )
-        )
-
-        for chunk in stream:
-            if chunk.text:
-                yield chunk.text
-
-    except Exception as e:
-        print("Streaming error:", e)
-        yield "Error generating document."
-
 
 @app.get("/")
-def hello_world():
-    return {"message": "AI Agent running"}
+def health_check():
+    return {"status": "ok", "message": "AI Agent running"}
 
 
-@app.get("/generate")
+@app.post("/generate")
 def generate(url: str):
-    return StreamingResponse(
-        stream_response(url),
-        media_type="text/plain"
+    # 1. Validate before touching the agent at all
+    try:
+        clean_url = validate_youtube_url(url)
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    # 2. Run agent
+    try:
+        pdf_bytes = run_agent(clean_url)
+    except ValueError as e:
+        # Clean agent error (no transcript, etc.)
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        # Infrastructure error (pdflatex missing, agent loop exceeded, etc.)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+    # 3. Return PDF
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=document.pdf"},
     )
