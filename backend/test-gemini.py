@@ -2,10 +2,10 @@ from google import genai
 from dotenv import load_dotenv
 import os
 
-# load .env file
 load_dotenv()
 
-client = genai.Client()
+
+client = genai.Client(api_key=os.getenv("GEMINI_LLM_API_KEY"))
 
 stream = client.models.generate_content_stream(
     model="gemini-2.5-flash",

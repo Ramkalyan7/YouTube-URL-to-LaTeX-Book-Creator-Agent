@@ -5,12 +5,11 @@ import re
 import shutil
 from pathlib import Path
 
-# Windows-safe temp directory — avoids spaces in path
 TEMP_BASE = Path("C:/tmp/latex") if os.name == "nt" else Path(tempfile.gettempdir()) / "latex"
 TEMP_BASE.mkdir(parents=True, exist_ok=True)
 
 MAX_RETRIES = 2
-COMPILE_TIMEOUT = 60  # seconds
+COMPILE_TIMEOUT = 60 
 
 
 class CompilationError(Exception):
@@ -57,12 +56,10 @@ def _sanitize_latex(latex: str) -> str:
     - Ensures \begin{document} exists
     - Strips any text after \end{document}
     """
-    # Strip everything after \end{document} (Gemini sometimes appends explanation)
     end_doc = latex.find(r"\end{document}")
     if end_doc != -1:
         latex = latex[: end_doc + len(r"\end{document}")]
 
-    # Must have \begin{document}
     if r"\begin{document}" not in latex:
         raise CompilationError(
             "Generated LaTeX is missing \\begin{document}.",

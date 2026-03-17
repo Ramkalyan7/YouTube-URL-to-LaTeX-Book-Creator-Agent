@@ -35,10 +35,8 @@ def generate(url: str):
     try:
         pdf_bytes = run_agent(clean_url)
     except ValueError as e:
-        # Clean agent error (no transcript, etc.)
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
-        # Infrastructure error (pdflatex missing, agent loop exceeded, etc.)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {e}")

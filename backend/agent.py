@@ -2,11 +2,16 @@ from google import genai
 from google.genai import types
 from tools import get_transcript
 from compiler import compile_latex_to_pdf, CompilationError
+from dotenv import load_dotenv
+import os
 
-client = genai.Client()
 
-MAX_AGENT_TURNS = 10  # safety limit — prevents infinite loops
 
+load_dotenv()
+
+client = genai.Client(api_key=os.getenv("GEMINI_LLM_API_KEY"))
+
+MAX_AGENT_TURNS = 10  
 GET_TRANSCRIPT_TOOL = types.Tool(
     function_declarations=[
         types.FunctionDeclaration(
@@ -113,7 +118,6 @@ def run_agent(url: str) -> bytes:
 
         candidate = response.candidates[0]
 
-        # Guard: unexpected stop reason
         finish_reason = str(candidate.finish_reason)
         if finish_reason not in ("STOP", "FinishReason.STOP", "1"):
             raise RuntimeError(f"Model stopped unexpectedly: {finish_reason}")
@@ -121,7 +125,6 @@ def run_agent(url: str) -> bytes:
         parts = candidate.content.parts
         messages.append(types.Content(role="model", parts=parts))
 
-        # ── Tool calls ────────────────────────────────────────────────────────
         function_calls = [p for p in parts if p.function_call is not None]
         if function_calls:
             tool_response_parts = []
@@ -149,12 +152,10 @@ def run_agent(url: str) -> bytes:
             messages.append(types.Content(role="user", parts=tool_response_parts))
             continue
 
-        # ── Final text response ───────────────────────────────────────────────
         if "latest" in _pdf_bytes_store:
             print("[agent] PDF ready ✓")
             return _pdf_bytes_store["latest"]
 
-        # Agent replied with a user-facing error (video too long, no transcript, etc.)
         text = " ".join(p.text for p in parts if p.text).strip()
         raise ValueError(text or "Agent stopped without producing a PDF.")
 
