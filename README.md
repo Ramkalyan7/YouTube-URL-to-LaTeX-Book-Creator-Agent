@@ -53,7 +53,7 @@ The application features a **FastAPI backend** for the AI agent and a **Vue 3 + 
 - **uvicorn** - ASGI server
 
 ### Frontend
-- **Vue 3** - Progressive JavaScript framework
+- **React** - JavaScript framework
 - **TypeScript** - Type-safe JavaScript
 - **Vite** - Modern build tool
 - **CORS** - Cross-origin requests handling
@@ -206,20 +206,3 @@ The backend is configured to accept requests from:
 - `http://localhost:5173` (frontend development server)
 
 Modify the `allow_origins` in `backend/main.py` for production deployment.
-
-## Future Enhancements
-
-- Support for longer videos with chunking
-- Multiple export formats (Markdown, HTML, Word)
-- Customizable LaTeX templates
-- Video language support
-- Batch processing
-- User authentication & history
-
-## License
-
-[Add your license here]
-
-## Support
-
-For issues or questions, please open an issue on GitHub.
